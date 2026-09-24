@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchCategories, fetchFeaturedFoods } from "../api/food";
-import { Category, FoodItem } from "../types";
+import { FoodItem } from "../types";
 import FoodCard from "../components/FoodCard";
 import CategoryIcon from "../components/CategoryIcon";
 import Icon from "../components/Icon";
+import LoadStatus from "../components/LoadStatus";
+import { useRetryFetch } from "../hooks/useRetryFetch";
 
 const STEPS = [
   {
@@ -30,19 +32,20 @@ const STEPS = [
 export default function Home() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [featured, setFeatured] = useState<FoodItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([fetchCategories(), fetchFeaturedFoods()])
-      .then(([cats, foods]) => {
-        setCategories(cats);
-        setFeatured(foods);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const {
+    data: homeData,
+    status,
+    retry,
+  } = useRetryFetch(
+    async () => {
+      const [cats, foods] = await Promise.all([fetchCategories(), fetchFeaturedFoods()]);
+      return { categories: cats, featured: foods };
+    },
+    [],
+    { categories: [], featured: [] as FoodItem[] }
+  );
+  const { categories, featured } = homeData;
+  const loading = status === "loading";
 
   function handleExplore() {
     navigate(query ? `/foods?search=${encodeURIComponent(query)}` : "/foods");
@@ -137,6 +140,8 @@ export default function Home() {
               <div key={i} className="h-80 animate-pulse rounded-2xl bg-surface-container-high" />
             ))}
           </div>
+        ) : status === "waking" || status === "error" ? (
+          <LoadStatus status={status} onRetry={retry} label="featured dishes" />
         ) : (
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((f) => (

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchFoods } from "../api/food";
 import { FoodItem } from "../types";
 import FoodCard from "../components/FoodCard";
 import Icon from "../components/Icon";
+import LoadStatus from "../components/LoadStatus";
+import { useRetryFetch } from "../hooks/useRetryFetch";
 
 const CATEGORY_PILLS = ["All Foods", "Burgers", "Pizza", "Asian", "Salads", "Desserts"];
 const SORTS = [
@@ -19,17 +21,13 @@ export default function AllFoods() {
   const search = params.get("search") || "";
   const sort = params.get("sort") || "recommended";
 
-  const [foods, setFoods] = useState<FoodItem[]>([]);
   const [searchInput, setSearchInput] = useState(search);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetchFoods({ category, search, sort })
-      .then(setFoods)
-      .catch(() => setFoods([]))
-      .finally(() => setLoading(false));
-  }, [category, search, sort]);
+  const {
+    data: foods,
+    status,
+    retry,
+  } = useRetryFetch(() => fetchFoods({ category, search, sort }), [category, search, sort], [] as FoodItem[]);
+  const loading = status === "loading";
 
   function updateParam(key: string, value: string) {
     const next = new URLSearchParams(params);
@@ -103,6 +101,8 @@ export default function AllFoods() {
               <div key={i} className="h-80 animate-pulse rounded-2xl bg-surface-container-high" />
             ))}
           </div>
+        ) : status === "waking" || status === "error" ? (
+          <LoadStatus status={status} onRetry={retry} label="dishes" />
         ) : foods.length === 0 ? (
           <div className="mt-16 text-center text-on-surface-variant">
             No dishes matched your search. Try a different keyword or category.
