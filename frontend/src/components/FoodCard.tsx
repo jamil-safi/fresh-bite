@@ -1,7 +1,5 @@
 import { FoodItem } from "../types";
 import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Icon from "./Icon";
 
@@ -13,20 +11,14 @@ const TAG_STYLES: Record<string, string> = {
 };
 
 export default function FoodCard({ food }: { food: FoodItem }) {
-  const { user } = useAuth();
   const { addItem } = useCart();
-  const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
   const [liked, setLiked] = useState(false);
 
   async function handleAdd() {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
     setAdding(true);
     try {
-      await addItem(food.id, 1);
+      await addItem(food, 1);
     } finally {
       setAdding(false);
     }

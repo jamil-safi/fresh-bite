@@ -14,17 +14,10 @@ export default function Cart() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
 
-  if (!user) {
+  if (loading && !cart) {
     return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <Icon name="shopping_cart" className="!text-5xl text-on-surface-variant" />
-        <h1 className="mt-4 text-headline-md">Sign in to view your cart</h1>
-        <p className="mt-2 text-sm text-on-surface-variant">
-          Create an account or sign in to start adding delicious dishes to your cart.
-        </p>
-        <button onClick={() => navigate("/login")} className="btn-primary mt-6">
-          Sign In
-        </button>
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="h-64 animate-pulse rounded-2xl bg-surface-container-high" />
       </div>
     );
   }
@@ -33,12 +26,16 @@ export default function Cart() {
     setPromoError("");
     try {
       await applyPromo(promoInput);
-    } catch {
-      setPromoError("Invalid or expired promo code");
+    } catch (err: any) {
+      setPromoError(err?.response?.data?.error || err?.message || "Invalid or expired promo code");
     }
   }
 
   async function handleCheckout() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
     setCheckingOut(true);
     try {
       await checkoutRequest(cart?.summary.promoCode);
@@ -200,8 +197,18 @@ export default function Cart() {
                 <span className="font-bold">Total</span>
                 <span className="text-2xl font-extrabold text-primary">${summary?.total.toFixed(2)}</span>
               </div>
+              {!user && (
+                <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-secondary-container/40 px-3 py-2 text-xs text-secondary">
+                  <Icon name="info" className="!text-sm" /> You'll need to sign in to complete your order.
+                </p>
+              )}
               <button onClick={handleCheckout} disabled={checkingOut} className="btn-primary mt-5 w-full">
-                {checkingOut ? "Placing Order…" : "Proceed to Secure Checkout"} <Icon name="arrow_forward" className="!text-base" />
+                {!user
+                  ? "Sign In to Checkout"
+                  : checkingOut
+                  ? "Placing Order…"
+                  : "Proceed to Secure Checkout"}{" "}
+                <Icon name="arrow_forward" className="!text-base" />
               </button>
               <p className="mt-3 flex items-center justify-center gap-1 text-xs text-on-surface-variant">
                 <Icon name="lock" className="!text-sm" /> Encrypted &amp; powered by Stripe Payments
